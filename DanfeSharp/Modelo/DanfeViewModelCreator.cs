@@ -1,4 +1,5 @@
-﻿using System;
+using System.Xml.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -75,10 +76,8 @@ namespace DanfeSharp.Modelo
         /// <returns></returns>
         public static DanfeViewModel CriarDeArquivoXml(String caminho)
         {
-            using (StreamReader sr = new StreamReader(caminho, true))
-            {
-                return CriarDeArquivoXmlInternal(sr);
-            }
+            string xml = File.ReadAllText(caminho, Encoding.UTF8);
+            return CriarDeStringXml(xml);
         }
 
         /// <summary>
@@ -103,22 +102,35 @@ namespace DanfeSharp.Modelo
         {
             if (str == null) throw new ArgumentNullException(nameof(str));
 
+            DanfeViewModel model = null;
             using (StringReader sr = new StringReader(str))
             {
-                return CriarDeArquivoXmlInternal(sr);
+                model = CriarDeArquivoXmlInternal(sr);
             }
-        }
+            ExtrairDadosReformaTributariaAdicionais(model, str);
+            return model;
 
+        }
 
         private static DanfeViewModel CriarDeArquivoXmlInternal(TextReader reader)
         {
-            ProcNFe nfe = null;
-            XmlSerializer serializer = new XmlSerializer(typeof(ProcNFe));
-
             try
             {
-                nfe = (ProcNFe)serializer.Deserialize(reader);
-                return CreateFromXml(nfe);
+                var nfe = new DanfeSharp.Esquemas.NFe.NFe();
+                var procNFe = new ProcNFe();
+                var xdoc = System.Xml.Linq.XDocument.Load(reader);
+                if (xdoc.Root != null && xdoc.Root.Name.LocalName.Equals("nfeProc", StringComparison.OrdinalIgnoreCase))
+                {
+                    var serializer = new XmlSerializer(typeof(ProcNFe));
+                    procNFe = (ProcNFe)serializer.Deserialize(xdoc.CreateReader());
+                }
+                else
+                {
+                    var serializer = new XmlSerializer(typeof(DanfeSharp.Esquemas.NFe.NFe));
+                    nfe = (DanfeSharp.Esquemas.NFe.NFe)serializer.Deserialize(xdoc.CreateReader());
+                    procNFe.NFe = nfe;
+                }
+                return CreateFromXml(procNFe);
             }
             catch (System.InvalidOperationException e)
             {
@@ -205,15 +217,22 @@ namespace DanfeSharp.Modelo
 
             model.Orientacao = ide.tpImp == 1 ? Orientacao.Retrato : Orientacao.Paisagem;
 
-            var infProt = procNfe.protNFe.infProt;
-            model.CodigoStatusReposta = infProt.cStat;
-            model.DescricaoStatusReposta = infProt.xMotivo;
+            var infProt = procNfe.protNFe?.infProt;
+            if (infProt != null)
+            {
+                model.CodigoStatusReposta = infProt.cStat;
+                model.DescricaoStatusReposta = infProt.xMotivo;
+            }
 
             model.TipoAmbiente = (int)ide.tpAmb;
             model.NfNumero = ide.nNF;
             model.NfSerie = ide.serie;
             model.NaturezaOperacao = ide.natOp;
             model.ChaveAcesso = procNfe.NFe.infNFe.Id.Substring(3);
+            if (procNfe.NFe.infNFeSupl != null && !string.IsNullOrWhiteSpace(procNfe.NFe.infNFeSupl.qrCode))
+            {
+                model.QrCodeTexto = procNfe.NFe.infNFeSupl.qrCode;
+            }
             model.TipoNF = (int)ide.tpNF;
 
             model.Emitente = CreateEmpresaFrom(infNfe.emit);
@@ -282,6 +301,10 @@ namespace DanfeSharp.Modelo
                     }
                 }
 
+                if (imposto != null && imposto.IBSCBS != null && !string.IsNullOrWhiteSpace(imposto.IBSCBS.cClassTrib))
+                {
+                    produto.CClassTrib = imposto.IBSCBS.cClassTrib;
+                }
                 model.Produtos.Add(produto);
             }
 
@@ -356,9 +379,11 @@ namespace DanfeSharp.Modelo
                 model.InformacoesAdicionaisFisco = procNfe.NFe.infNFe.infAdic.infAdFisco;
             }
 
-            var infoProto = procNfe.protNFe.infProt;
-
-            model.ProtocoloAutorizacao = String.Format(Formatador.Cultura, "{0} - {1}", infoProto.nProt, infoProto.dhRecbto.DateTimeOffsetValue.DateTime);
+            var infoProto = procNfe.protNFe?.infProt;
+            if (infoProto != null)
+            {
+                model.ProtocoloAutorizacao = String.Format(Formatador.Cultura, "{0} - {1}", infoProto.nProt, infoProto.dhRecbto.DateTimeOffsetValue.DateTime);
+            }
 
             ExtrairDatas(model, infNfe);
 
@@ -403,6 +428,103 @@ namespace DanfeSharp.Modelo
             m.Endereco = sb.ToString();
 
             return m;
+        }
+        private static double ParseDoubleSafe(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return 0;
+            s = s.Replace(",", ".");
+            double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double v);
+            return v;
+        }
+
+        private static void ExtrairDadosReformaTributariaAdicionais(DanfeViewModel model, string xmlString)
+        {
+            if (model == null || string.IsNullOrWhiteSpace(xmlString)) return;
+
+            try
+            {
+                var xDoc = XDocument.Parse(xmlString);
+
+                if (string.IsNullOrWhiteSpace(model.QrCodeTexto))
+                {
+                    var qrEl = xDoc.Descendants().FirstOrDefault(x => x.Name.LocalName == "qrCode");
+                    if (qrEl != null && !string.IsNullOrWhiteSpace(qrEl.Value))
+                    {
+                        model.QrCodeTexto = qrEl.Value.Trim();
+                    }
+                }
+
+                var dets = xDoc.Descendants().Where(x => x.Name.LocalName == "det").ToList();
+                for (int i = 0; i < dets.Count && i < model.Produtos.Count; i++)
+                {
+                    var xDet = dets[i];
+                    var prod = model.Produtos[i];
+
+                    if (string.IsNullOrWhiteSpace(prod.CClassTrib))
+                    {
+                        var cClassEl = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "cClassTrib");
+                        if (cClassEl != null && !string.IsNullOrWhiteSpace(cClassEl.Value))
+                        {
+                            prod.CClassTrib = cClassEl.Value.Trim();
+                        }
+                    }
+
+                    if (prod.BaseIbsCbs == 0)
+                    {
+                        var vbc = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "vBC" && (x.Parent?.Name.LocalName.IndexOf("IBS", StringComparison.OrdinalIgnoreCase) >= 0 || x.Parent?.Name.LocalName.IndexOf("CBS", StringComparison.OrdinalIgnoreCase) >= 0));
+                        if (vbc != null) prod.BaseIbsCbs = ParseDoubleSafe(vbc.Value);
+                    }
+                    if (prod.AliquotaIbsUf == 0)
+                    {
+                        var p = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "pIBSUF" || (x.Name.LocalName == "pAliqEfet" && x.Parent?.Name.LocalName.IndexOf("IBSUF", StringComparison.OrdinalIgnoreCase) >= 0));
+                        if (p != null) prod.AliquotaIbsUf = ParseDoubleSafe(p.Value);
+                    }
+                    if (prod.ValorIbsUf == 0)
+                    {
+                        var v = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "vIBSUF");
+                        if (v != null) prod.ValorIbsUf = ParseDoubleSafe(v.Value);
+                    }
+                    if (prod.AliquotaIbsMun == 0)
+                    {
+                        var p = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "pIBSMun" || (x.Name.LocalName == "pAliqEfet" && x.Parent?.Name.LocalName.IndexOf("IBSMun", StringComparison.OrdinalIgnoreCase) >= 0));
+                        if (p != null) prod.AliquotaIbsMun = ParseDoubleSafe(p.Value);
+                    }
+                    if (prod.ValorIbsMun == 0)
+                    {
+                        var v = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "vIBSMun");
+                        if (v != null) prod.ValorIbsMun = ParseDoubleSafe(v.Value);
+                    }
+                    if (prod.AliquotaCbs == 0)
+                    {
+                        var p = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "pCBS" || (x.Name.LocalName == "pAliqEfet" && x.Parent?.Name.LocalName.IndexOf("CBS", StringComparison.OrdinalIgnoreCase) >= 0));
+                        if (p != null) prod.AliquotaCbs = ParseDoubleSafe(p.Value);
+                    }
+                    if (prod.ValorCbs == 0)
+                    {
+                        var v = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "vCBS");
+                        if (v != null) prod.ValorCbs = ParseDoubleSafe(v.Value);
+                    }
+                    if (prod.BaseImpostoSeletivo == 0)
+                    {
+                        var v = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "vBCIS");
+                        if (v != null) prod.BaseImpostoSeletivo = ParseDoubleSafe(v.Value);
+                    }
+                    if (prod.AliquotaImpostoSeletivo == 0)
+                    {
+                        var p = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "pIS");
+                        if (p != null) prod.AliquotaImpostoSeletivo = ParseDoubleSafe(p.Value);
+                    }
+                    if (prod.ValorImpostoSeletivo == 0)
+                    {
+                        var v = xDet.Descendants().FirstOrDefault(x => x.Name.LocalName == "vIS");
+                        if (v != null) prod.ValorImpostoSeletivo = ParseDoubleSafe(v.Value);
+                    }
+                }
+            }
+            catch
+            {
+                // Ignorar erro no parse auxiliar
+            }
         }
     }
 }

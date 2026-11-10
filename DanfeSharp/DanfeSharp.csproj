@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -52,6 +52,9 @@
     <Compile Include="Blocos\BlocoDadosAdicionais.cs" />
     <Compile Include="Blocos\BlocoDestinatarioRemetente.cs" />
     <Compile Include="Blocos\BlocoDuplicataFatura.cs" />
+    <Compile Include="Blocos\BlocoIbscbs.cs" />
+    <Compile Include="Blocos\BlocoTotalProdutosNota.cs" />
+    <Compile Include="Blocos\BlocoTotalIcmsIpi.cs" />
     <Compile Include="Blocos\BlocoIdentificacaoEmitente.cs" />
     <Compile Include="Blocos\BlocoCalculoIssqn.cs" />
     <Compile Include="Blocos\BlocoLocalEntregaRetirada\BlocoLocalEntrega.cs" />
@@ -65,6 +68,7 @@
     <Compile Include="Elementos\Barcode128C.cs" />
     <Compile Include="Elementos\CabecalhoBloco.cs" />
     <Compile Include="Elementos\Campo.cs" />
+    <Compile Include="Elementos\CampoQrCode.cs" />
     <Compile Include="Elementos\CampoMultilinha.cs" />
     <Compile Include="Elementos\CampoNumerico.cs" />
     <Compile Include="Elementos\LinhaTracejada.cs" />
@@ -92,6 +96,7 @@
     <Compile Include="Extentions.cs" />
     <Compile Include="Formatador.cs" />
     <Compile Include="Graphics\Fonte.cs" />
+    <Compile Include="Graphics\QRCodeGenerator.cs" />
     <Compile Include="Modelo\CalculoImpostoViewModel.cs" />
     <Compile Include="Modelo\CalculoIssqnViewModel.cs" />
     <Compile Include="Modelo\DanfeViewModel.cs" />

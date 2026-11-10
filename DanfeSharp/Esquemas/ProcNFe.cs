@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Xml;
 using System.Xml.Serialization;
@@ -79,9 +79,18 @@ namespace DanfeSharp.Esquemas.NFe
 
     [Serializable]
     [XmlType(Namespace = Namespaces.NFe)]
+    [XmlRoot("NFe", Namespace = Namespaces.NFe)]
     public class NFe
     {
         public InfNFe infNFe { get; set; }
+        public InfNFeSupl infNFeSupl { get; set; }
+    }
+    [Serializable]
+    [XmlType(AnonymousType = true, Namespace = Namespaces.NFe)]
+    public class InfNFeSupl
+    {
+        public string qrCode { get; set; }
+        public string urlChave { get; set; }
     }
 
 
@@ -320,6 +329,13 @@ namespace DanfeSharp.Esquemas.NFe
         public string vTotTrib { get; set; }
         public ProdutoICMS ICMS { get; set; }
         public ProdutoIPI IPI { get; set; }
+        public ProdutoIBSCBS IBSCBS { get; set; }
+    }
+    [Serializable]
+    [XmlType(AnonymousType = true, Namespace = Namespaces.NFe)]
+    public partial class ProdutoIBSCBS
+    {
+        public string cClassTrib { get; set; }
     }
 
     /// <summary>

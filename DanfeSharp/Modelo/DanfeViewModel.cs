@@ -1,4 +1,4 @@
-﻿using DanfeSharp.Esquemas.NFe;
+using DanfeSharp.Esquemas.NFe;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -226,6 +226,28 @@ namespace DanfeSharp.Modelo
         /// Exibe o Nome Fantasia, caso disponível, ao invés da Razão Social no quadro identificação do emitente.
         /// </summary>
         public bool PreferirEmitenteNomeFantasia { get; set; } = true;
+
+        #region Campos IBS/CBS - Reforma Tributaria
+        public string VersaoDanfe { get; set; }
+        public double BaseCalculoIbsCbs { get; set; }
+        public double ValorIbsMunicipal { get; set; }
+        public double ValorIbsEstadual { get; set; }
+        public double ValorCbs { get; set; }
+        public double ValorImpostoSeletivo { get; set; }
+        public double ValorIbsMonofasico { get; set; }
+        public double ValorCbsMonofasico { get; set; }
+        public double ValorIbsMonofasicoRetencao { get; set; }
+        public double ValorCbsMonofasicoRetencao { get; set; }
+        public string RegimeApuracaoIbsCbs { get; set; }
+        public string CodigoRegimeTributarioDescricao { get; set; }
+        public string QrCodeTexto { get; set; }
+        public string ObterConteudoQrCode()
+        {
+            if (!string.IsNullOrWhiteSpace(ChaveAcesso)) return ChaveAcesso;
+            if (!string.IsNullOrWhiteSpace(QrCodeTexto)) return QrCodeTexto;
+            return null;
+        }
+ #endregion
 
 
         #endregion
