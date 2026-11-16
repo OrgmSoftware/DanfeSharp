@@ -1,4 +1,4 @@
-﻿namespace DanfeSharp.Modelo
+namespace DanfeSharp.Modelo
 {
     public class CalculoImpostoViewModel
     {
@@ -98,11 +98,20 @@
         /// </summary>
         public double ValorTotalNota { get; set; }
 
-
         /// <summary>
         /// <para>Valor aproximado total de tributos federais, estaduais e municipais (NT 2013.003)</para>
         /// <para>Tag vTotTrib</para>
         /// </summary>
         public double? ValorAproximadoTributos { get; set; }
+
+        // Campos Reforma Tributária / FCP / Desonerações
+        public double ValorFcp { get; set; }
+        public double ValorFcpSt { get; set; }
+        public double? ValorIcmsUfDestino { get; set; }
+        public double? ValorFcpUfDestino { get; set; }
+        public double BaseCalculoIcmsMonofasico { get; set; }
+        public double ValorIcmsMonofasico { get; set; }
+        public double BaseCalculoIcmsMonofasicoRetencao { get; set; }
+        public double ValorIcmsMonofasicoRetencao { get; set; }
     }
 }

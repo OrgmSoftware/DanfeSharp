@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using org.pdfclown.documents.contents.xObjects;
 using DanfeSharp.Modelo;
 
@@ -51,6 +51,21 @@ namespace DanfeSharp.Blocos
                 .ComCampo("Cnpj", Formatador.FormatarCnpj(ViewModel.Emitente.CnpjCpf), AlinhamentoHorizontal.Centro)
                 .ComLargurasIguais();
 
+            if (ViewModel.VersaoDanfe == "NOV2026")
+            {
+                string crt = ViewModel.Emitente.CRT;
+                string crtDesc = crt == "1" ? "1 - SIMPLES NACIONAL" :
+                                 crt == "2" ? "2 - SIMPLES NACIONAL - EXCESSO DE SUBLIMITE" : "3 - REGIME NORMAL";
+
+                string regimeApuracao = !string.IsNullOrWhiteSpace(ViewModel.RegimeApuracaoIbsCbs) 
+                    ? ViewModel.RegimeApuracaoIbsCbs 
+                    : "";
+
+                AdicionarLinhaCampos()
+                    .ComCampo("CÓDIGO DO REGIME TRIBUTÁRIO", crtDesc)
+                    .ComCampo("TIPO DE REGIME DE APURAÇÃO DO IBS E DA CBS", regimeApuracao)
+                    .ComLargurasIguais();
+            }
         }
 
         public XObject Logo

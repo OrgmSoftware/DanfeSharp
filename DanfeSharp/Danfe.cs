@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
 using DanfeSharp.Blocos;
+using DanfeSharp.Modelo;
 using org.pdfclown.documents;
 using org.pdfclown.documents.contents.fonts;
 using org.pdfclown.files;
-using DanfeSharp.Modelo;
+using System;
+using System.Collections.Generic;
 
 namespace DanfeSharp
 {
@@ -49,7 +49,7 @@ namespace DanfeSharp
 
             Paginas = new List<DanfePagina>();
             Canhoto = CriarBloco<BlocoCanhoto>();
-            IdentificacaoEmitente = AdicionarBloco<BlocoIdentificacaoEmitente>();  
+            IdentificacaoEmitente = AdicionarBloco<BlocoIdentificacaoEmitente>();
             AdicionarBloco<BlocoDestinatarioRemetente>();
 
             if (ViewModel.LocalRetirada != null && ViewModel.ExibirBlocoLocalRetirada)
@@ -61,18 +61,30 @@ namespace DanfeSharp
             if (ViewModel.Duplicatas.Count > 0)
                 AdicionarBloco<BlocoDuplicataFatura>();
 
-            AdicionarBloco<BlocoCalculoImposto>(ViewModel.Orientacao == Orientacao.Paisagem ? EstiloPadrao : CriarEstilo(4.75F));
+            if (ViewModel.VersaoDanfe == "NOV2026")
+            {
+                // NOVO LAYOUT REFORMA TRIBUTÁRIA (DANFE 2027)
+                AdicionarBloco<BlocoTotalProdutosNota>();
+                AdicionarBloco<BlocoTotalIcmsIpi>();
+                AdicionarBloco<BlocoIbscbs>();
+                AdicionarBloco<BlocoCalculoIssqn>();
+            }
+            else
+            {
+                // LAYOUT CLÁSSICO LEGADO
+                AdicionarBloco<BlocoCalculoImposto>(ViewModel.Orientacao == Orientacao.Paisagem ? EstiloPadrao : CriarEstilo(4.75F));
+                if (ViewModel.CalculoIssqn.Mostrar)
+                    AdicionarBloco<BlocoCalculoIssqn>();
+            }
+
             AdicionarBloco<BlocoTransportador>();
             AdicionarBloco<BlocoDadosAdicionais>(CriarEstilo(tFonteCampoConteudo: 8));
-
-            if(ViewModel.CalculoIssqn.Mostrar)
-                AdicionarBloco<BlocoCalculoIssqn>();
 
             AdicionarMetadata();
 
             _FoiGerado = false;
         }
-        
+
         public void AdicionarLogoImagem(System.IO.Stream stream)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
@@ -96,7 +108,7 @@ namespace DanfeSharp
         {
             if (String.IsNullOrWhiteSpace(path)) throw new ArgumentException(nameof(path));
 
-            using(var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read))
+            using (var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read))
             {
                 AdicionarLogoImagem(fs);
             }
@@ -132,12 +144,12 @@ namespace DanfeSharp
             if (_FoiGerado) throw new InvalidOperationException("O Danfe já foi gerado.");
 
             IdentificacaoEmitente.Logo = _LogoObject;
-            var tabela = new TabelaProdutosServicos(ViewModel, EstiloPadrao);      
-                    
+            var tabela = new TabelaProdutosServicos(ViewModel, EstiloPadrao);
+
             while (true)
             {
-                DanfePagina p = CriarPagina();                   
-               
+                DanfePagina p = CriarPagina();
+
                 tabela.SetPosition(p.RetanguloCorpo.Location);
                 tabela.SetSize(p.RetanguloCorpo.Size);
                 tabela.Draw(p.Gfx);
@@ -145,7 +157,7 @@ namespace DanfeSharp
                 p.Gfx.Stroke();
                 p.Gfx.Flush();
 
-                if (tabela.CompletamenteDesenhada) break;            
+                if (tabela.CompletamenteDesenhada) break;
 
             }
 
@@ -162,11 +174,10 @@ namespace DanfeSharp
             p.DesenharCreditos();
 
             // Ambiente de homologação
-            // 7. O DANFE emitido para representar NF-e cujo uso foi autorizado em ambiente de
-            // homologação sempre deverá conter a frase “SEM VALOR FISCAL” no quadro “Informações
-            // Complementares” ou em marca d’água destacada.
             if (ViewModel.TipoAmbiente == 2)
                 p.DesenharAvisoHomologacao();
+            else if (string.IsNullOrEmpty(ViewModel.ProtocoloAutorizacao))
+                p.DesenharAvisoNaoAutorizado();
 
             return p;
         }
@@ -181,7 +192,7 @@ namespace DanfeSharp
             return (T)Activator.CreateInstance(typeof(T), ViewModel, estilo);
         }
 
-        internal T AdicionarBloco<T>() where T: BlocoBase
+        internal T AdicionarBloco<T>() where T : BlocoBase
         {
             var bloco = CriarBloco<T>();
             _Blocos.Add(bloco);
@@ -205,7 +216,7 @@ namespace DanfeSharp
             int nFolhas = Paginas.Count;
             for (int i = 0; i < Paginas.Count; i++)
             {
-                Paginas[i].DesenhaNumeroPaginas(i + 1, nFolhas);               
+                Paginas[i].DesenhaNumeroPaginas(i + 1, nFolhas);
             }
         }
 
@@ -220,11 +231,11 @@ namespace DanfeSharp
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
 
-            File.Save(new org.pdfclown.bytes.Stream(stream), SerializationModeEnum.Incremental);            
+            File.Save(new org.pdfclown.bytes.Stream(stream), SerializationModeEnum.Incremental);
         }
 
         #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
+        private bool disposedValue = false;
 
         protected virtual void Dispose(bool disposing)
         {
@@ -235,26 +246,13 @@ namespace DanfeSharp
                     File.Dispose();
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-
                 disposedValue = true;
             }
         }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~Danfe() {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
-
-        // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
         }
         #endregion
     }
