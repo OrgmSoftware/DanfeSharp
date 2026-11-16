@@ -91,7 +91,7 @@ namespace DanfeSharp.Modelo
 
             using (StreamReader sr = new StreamReader(stream, true))
             {
-                return CriarDeArquivoXmlInternal(sr);
+                return CriarDeStringXml(sr.ReadToEnd());
             }
         }
 
@@ -451,6 +451,54 @@ namespace DanfeSharp.Modelo
                     if (qrEl != null && !string.IsNullOrWhiteSpace(qrEl.Value))
                     {
                         model.QrCodeTexto = qrEl.Value.Trim();
+                    }
+                }
+
+                var xTotal = xDoc.Descendants().FirstOrDefault(x => x.Name.LocalName == "total");
+                if (xTotal != null)
+                {
+                    var xIbsCbsTot = xTotal.Elements().FirstOrDefault(x => x.Name.LocalName == "IBSCBSTot");
+                    if (xIbsCbsTot != null)
+                    {
+                        var vbcEl = xIbsCbsTot.Descendants().FirstOrDefault(x => x.Name.LocalName == "vBCIBSCBS");
+                        if (vbcEl != null && model.BaseCalculoIbsCbs == 0)
+                            model.BaseCalculoIbsCbs = ParseDoubleSafe(vbcEl.Value);
+
+                        var vIbsUfEl = xIbsCbsTot.Descendants().FirstOrDefault(x => x.Name.LocalName == "vIBSUF");
+                        if (vIbsUfEl != null && model.ValorIbsEstadual == 0)
+                            model.ValorIbsEstadual = ParseDoubleSafe(vIbsUfEl.Value);
+
+                        var vIbsMunEl = xIbsCbsTot.Descendants().FirstOrDefault(x => x.Name.LocalName == "vIBSMun");
+                        if (vIbsMunEl != null && model.ValorIbsMunicipal == 0)
+                            model.ValorIbsMunicipal = ParseDoubleSafe(vIbsMunEl.Value);
+
+                        var vCbsEl = xIbsCbsTot.Descendants().FirstOrDefault(x => x.Name.LocalName == "vCBS");
+                        if (vCbsEl != null && model.ValorCbs == 0)
+                            model.ValorCbs = ParseDoubleSafe(vCbsEl.Value);
+
+                        var vIbsMonoEl = xIbsCbsTot.Descendants().FirstOrDefault(x => x.Name.LocalName == "vIBSMono");
+                        if (vIbsMonoEl != null && model.ValorIbsMonofasico == 0)
+                            model.ValorIbsMonofasico = ParseDoubleSafe(vIbsMonoEl.Value);
+
+                        var vCbsMonoEl = xIbsCbsTot.Descendants().FirstOrDefault(x => x.Name.LocalName == "vCBSMono");
+                        if (vCbsMonoEl != null && model.ValorCbsMonofasico == 0)
+                            model.ValorCbsMonofasico = ParseDoubleSafe(vCbsMonoEl.Value);
+
+                        var vIbsMonoRetEl = xIbsCbsTot.Descendants().FirstOrDefault(x => x.Name.LocalName == "vIBSMonoReten");
+                        if (vIbsMonoRetEl != null && model.ValorIbsMonofasicoRetencao == 0)
+                            model.ValorIbsMonofasicoRetencao = ParseDoubleSafe(vIbsMonoRetEl.Value);
+
+                        var vCbsMonoRetEl = xIbsCbsTot.Descendants().FirstOrDefault(x => x.Name.LocalName == "vCBSMonoReten");
+                        if (vCbsMonoRetEl != null && model.ValorCbsMonofasicoRetencao == 0)
+                            model.ValorCbsMonofasicoRetencao = ParseDoubleSafe(vCbsMonoRetEl.Value);
+                    }
+
+                    var xIsTot = xTotal.Elements().FirstOrDefault(x => x.Name.LocalName == "ISTot");
+                    if (xIsTot != null)
+                    {
+                        var vIsEl = xIsTot.Descendants().FirstOrDefault(x => x.Name.LocalName == "vIS");
+                        if (vIsEl != null && model.ValorImpostoSeletivo == 0)
+                            model.ValorImpostoSeletivo = ParseDoubleSafe(vIsEl.Value);
                     }
                 }
 

@@ -227,6 +227,11 @@ namespace DanfeSharp.Modelo
         /// </summary>
         public bool PreferirEmitenteNomeFantasia { get; set; } = true;
 
+        /// <summary>
+        /// Exibe os campos de IBS e CBS no quadro Cálculo do Imposto do DANFE padrão.
+        /// </summary>
+        public bool ExibirIbsCbs { get; set; } = true;
+
         #region Campos IBS/CBS - Reforma Tributaria
         public string VersaoDanfe { get; set; }
         public double BaseCalculoIbsCbs { get; set; }
